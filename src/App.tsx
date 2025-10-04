@@ -48,36 +48,37 @@ function App() {
     setError('');
 
     try {
-      const weatherResponse = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,surface_pressure&timezone=auto`
-      );
+        const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const date = `${yyyy}${mm}${dd}`;
 
-      if (!weatherResponse.ok) throw new Error('Weather data unavailable');
+  const weatherResponse = await fetch(
+    `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,RH2M,WS2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN&community=RE&latitude=${lat}&longitude=${lon}&format=JSON&start=${date}&end=${date}`
+  );
 
-      const weatherData = await weatherResponse.json();
+  if (!weatherResponse.ok) throw new Error('Weather data unavailable');
 
-      const weatherDescriptions: { [key: number]: string } = {
-        0: 'Clear sky',
-        1: 'Mainly clear',
-        2: 'Partly cloudy',
-        3: 'Overcast',
-        45: 'Foggy',
-        48: 'Foggy',
-        51: 'Light drizzle',
-        61: 'Light rain',
-        80: 'Rain showers',
-        95: 'Thunderstorm'
-      };
+  const weatherData = await weatherResponse.json();
+  const parameters = weatherData?.properties?.parameter;
 
-      setWeather({
-        temperature: Math.round(weatherData.current.temperature_2m),
-        feels_like: Math.round(weatherData.current.temperature_2m - 2),
-        humidity: weatherData.current.relative_humidity_2m,
-        wind_speed: Math.round(weatherData.current.wind_speed_10m),
-        description: weatherDescriptions[weatherData.current.weather_code] || 'Unknown',
-        visibility: 10,
-        pressure: Math.round(weatherData.current.surface_pressure)
-      });
+  if (!parameters || !parameters.T2M) {
+    throw new Error('NASA API returned invalid data. Check coordinates.');
+  }
+
+  // 🧠 Get the first available record dynamically
+  const firstKey = Object.keys(parameters.T2M)[0];
+
+  setWeather({
+    temperature: Math.round(parameters.T2M[firstKey]),
+    feels_like: Math.round(parameters.T2M[firstKey] - 2),
+    humidity: Math.round(parameters.RH2M[firstKey]),
+    wind_speed: Math.round(parameters.WS2M[firstKey]),
+    description: 'NASA POWER Climate Data',
+    visibility: 10,
+    pressure: 1013 // NASA API doesn’t give surface pressure directly
+  });
 
       const soilResponse = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=soil_temperature_0cm,soil_moisture_0_to_1cm&timezone=auto&forecast_days=1`
