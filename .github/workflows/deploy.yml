@@ -38,13 +38,13 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
-        run: cd .bolt && npm run build && cd ..
+        run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './bolt/dist'
+          path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
